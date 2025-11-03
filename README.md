@@ -1,6 +1,7 @@
 # code-scanner-poc
 
-Un proyecto profesional Node.js + TypeScript con configuración moderna de ESLint, Prettier y Yarn Berry.
+PoC para escaneo de códigos de barras y QR usando dispositivos HID en Node.js con TypeScript.
+Ver [GUIDELINES.md](./GUIDELINES.md) para consultar qué se pretende con este proyecto, estándares de calidad de código y flujo de trabajo.
 
 ## Características
 
@@ -154,7 +155,7 @@ Esto asegura que todos los colaboradores usen exactamente la misma versión de Y
 
 ## Flujo de trabajo de desarrollo
 
-1. Asegúrate de tener Node.js v24.11.0 instalado (`nvm use`)
+1. Asegúrate de tener Node.js v24.11.0 instalado (recomendado usar un gestor de versiones como nvm, fnm, etc.)
 2. Habilita Corepack si no está ya habilitado: `corepack enable`
 3. Instala las dependencias: `yarn install`
 4. Haz cambios en los archivos de `src/`
@@ -179,7 +180,7 @@ El proyecto usa Husky para imponer estándares de calidad de código automática
 
 #### Hook de pre-commit
 
-Antes de cada commit, las siguientes comprobaciones se ejecutan automáticamente en los archivos preparados:
+Antes de cada commit, las siguientes comprobaciones se ejecutan automáticamente en los archivos modificados:
 
 - **ESLint**: Hace linting y auto-corrige archivos JavaScript/TypeScript
 - **Prettier**: Formatea el código según las reglas del proyecto
