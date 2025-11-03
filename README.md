@@ -9,6 +9,8 @@ A professional Node.js + TypeScript project with modern ESLint, Prettier, and Ya
 - **TypeScript**: Robust configuration with strict type checking
 - **ESLint**: Modern flat config (eslint.config.js) with TypeScript support
 - **Prettier**: Code formatting with industry-standard rules
+- **Git Hooks with Husky**: Automated code quality checks before commits
+- **Conventional Commits**: Enforced commit message format with commitlint
 - **Scripts**: Development, build, linting, and formatting scripts
 
 ## Prerequisites
@@ -170,3 +172,53 @@ This project enforces high code quality standards:
 - **Linting**: ESLint with zero warnings tolerance
 - **Formatting**: Automatic code formatting with Prettier
 - **Consistency**: Standardized configuration across the project
+
+### Git Hooks
+
+The project uses Husky to enforce code quality standards automatically:
+
+#### Pre-commit Hook
+
+Before each commit, the following checks are automatically run on staged files:
+
+- **ESLint**: Lints and auto-fixes JavaScript/TypeScript files
+- **Prettier**: Formats code according to project rules
+
+If any issues cannot be auto-fixed, the commit will be blocked until you resolve them.
+
+#### Commit Message Hook
+
+All commit messages must follow the [Conventional Commits](https://www.conventionalcommits.org/) format:
+
+```
+<type>(<optional scope>): <description>
+
+[optional body]
+
+[optional footer]
+```
+
+**Allowed types:**
+
+- `feat`: A new feature
+- `fix`: A bug fix
+- `docs`: Documentation only changes
+- `style`: Changes that don't affect code meaning (white-space, formatting, etc.)
+- `refactor`: Code change that neither fixes a bug nor adds a feature
+- `perf`: Performance improvements
+- `test`: Adding missing tests or correcting existing tests
+- `build`: Changes to build system or dependencies
+- `ci`: Changes to CI configuration files and scripts
+- `chore`: Other changes that don't modify src or test files
+- `revert`: Reverts a previous commit
+
+**Examples:**
+
+```bash
+git commit -m "feat: add barcode scanner support"
+git commit -m "fix: resolve USB reconnection issue"
+git commit -m "docs: update installation instructions"
+git commit -m "refactor: improve HID device discovery logic"
+```
+
+Invalid commit messages will be rejected before the commit is created.
