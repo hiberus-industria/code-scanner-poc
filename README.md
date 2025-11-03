@@ -1,10 +1,11 @@
 # code-scanner-poc
 
-A professional Node.js + TypeScript project with modern ESLint and Prettier configuration.
+A professional Node.js + TypeScript project with modern ESLint, Prettier, and Yarn Berry configuration.
 
 ## Features
 
 - **Node.js v24.11.0**: Version fixed via `.nvmrc`
+- **Yarn Berry (v4.10.3)**: Modern package manager with zero-installs support (disabled)
 - **TypeScript**: Robust configuration with strict type checking
 - **ESLint**: Modern flat config (eslint.config.js) with TypeScript support
 - **Prettier**: Code formatting with industry-standard rules
@@ -13,19 +14,32 @@ A professional Node.js + TypeScript project with modern ESLint and Prettier conf
 ## Prerequisites
 
 - Node.js v24.11.0 (use nvm: `nvm use`)
+- Corepack enabled (comes with Node.js 16.10+): `corepack enable`
 
 ## Installation
 
+The project uses Yarn Berry (v4.10.3) as its package manager, which is locked via the `packageManager` field in `package.json`. This ensures all contributors use the same version.
+
 ```bash
-npm install
+# Corepack will automatically use the correct Yarn version
+yarn install
+```
+
+If you don't have Corepack enabled:
+
+```bash
+corepack enable
+yarn install
 ```
 
 ## Scripts
 
+All scripts use Yarn Berry:
+
 ### Development
 
 ```bash
-npm run dev
+yarn dev
 ```
 
 Runs the application in watch mode using tsx. Changes to source files will automatically restart the application.
@@ -33,7 +47,7 @@ Runs the application in watch mode using tsx. Changes to source files will autom
 ### Build
 
 ```bash
-npm run build
+yarn build
 ```
 
 Compiles TypeScript to JavaScript in the `dist/` directory.
@@ -41,7 +55,7 @@ Compiles TypeScript to JavaScript in the `dist/` directory.
 ### Start
 
 ```bash
-npm start
+yarn start
 ```
 
 Runs the compiled application from the `dist/` directory. Make sure to build first.
@@ -49,13 +63,13 @@ Runs the compiled application from the `dist/` directory. Make sure to build fir
 ### Linting
 
 ```bash
-npm run lint
+yarn lint
 ```
 
 Runs ESLint with zero warnings tolerance.
 
 ```bash
-npm run lint:fix
+yarn lint:fix
 ```
 
 Automatically fixes linting issues where possible.
@@ -63,13 +77,13 @@ Automatically fixes linting issues where possible.
 ### Formatting
 
 ```bash
-npm run format
+yarn format
 ```
 
 Formats all TypeScript, JavaScript, and JSON files using Prettier.
 
 ```bash
-npm run format:check
+yarn format:check
 ```
 
 Checks if all files are formatted according to Prettier rules.
@@ -77,7 +91,7 @@ Checks if all files are formatted according to Prettier rules.
 ### Type Checking
 
 ```bash
-npm run typecheck
+yarn typecheck
 ```
 
 Type-checks the project without emitting files.
@@ -89,6 +103,9 @@ Type-checks the project without emitting files.
 ├── src/              # TypeScript source files
 │   └── index.ts      # Main entry point
 ├── dist/             # Compiled output (generated)
+├── .yarn/            # Yarn Berry cache (gitignored)
+├── .yarnrc.yml       # Yarn configuration
+├── yarn.lock         # Yarn dependency lockfile
 ├── .nvmrc            # Node version specification
 ├── tsconfig.json     # TypeScript configuration
 ├── eslint.config.js  # ESLint flat config
@@ -97,6 +114,17 @@ Type-checks the project without emitting files.
 ```
 
 ## Configuration
+
+### Package Manager (Yarn Berry)
+
+The project uses Yarn Berry v4.10.3 (LTS) with the following configuration:
+
+- **Node Linker**: `node-modules` (most compatible, uses traditional node_modules)
+- **Immutable Installs**: Disabled for development flexibility
+- **Global Cache**: Disabled (local cache only)
+- **Version Locking**: Via `packageManager` field in package.json
+
+This ensures all contributors use the exact same Yarn version automatically.
 
 ### TypeScript (tsconfig.json)
 
@@ -124,12 +152,15 @@ Type-checks the project without emitting files.
 
 ## Development Workflow
 
-1. Make changes to files in `src/`
-2. Run `npm run dev` for live development
-3. Run `npm run lint` to check for issues
-4. Run `npm run format` to format code
-5. Run `npm run build` to compile
-6. Run `npm start` to execute the compiled code
+1. Ensure you have Node.js v24.11.0 installed (`nvm use`)
+2. Enable Corepack if not already enabled: `corepack enable`
+3. Install dependencies: `yarn install`
+4. Make changes to files in `src/`
+5. Run `yarn dev` for live development
+6. Run `yarn lint` to check for issues
+7. Run `yarn format` to format code
+8. Run `yarn build` to compile
+9. Run `yarn start` to execute the compiled code
 
 ## Code Quality
 
