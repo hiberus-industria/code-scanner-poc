@@ -1,0 +1,9 @@
+{
+  // General editor settings
+  "editor.formatOnSave": true,
+  "editor.defaultFormatter": "esbenp.prettier-vscode",
+
+  // JavaScript settings
+  "npm.packageManager": "yarn",
+  "javascript.updateImportsOnFileMove.enabled": "always"
+}
