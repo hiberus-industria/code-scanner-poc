@@ -13,8 +13,8 @@ project_context: |
   - ESLint with zero warnings policy
   - Prettier for code formatting
   - Conventional commits (commitlint)
-  - Yarn Berry v4.10.3
-  - Node.js v24.11.0
+  - Yarn Berry (version specified in package.json "packageManager" field)
+  - Node.js (version specified in .nvmrc)
 
 # Coding standards to enforce
 coding_standards:

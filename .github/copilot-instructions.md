@@ -582,14 +582,18 @@ logger.info('Event published', event);
 
 ### What is MCP?
 
-MCP (Model Context Protocol) is an open protocol by Anthropic that enables secure connections between AI assistants and external data sources/tools. It's particularly useful for:
+MCP (Model Context Protocol) is an open protocol that enables secure connections between AI assistants and external data sources/tools. It's particularly useful for:
 
 - Connecting to local development tools (linters, formatters, debuggers)
 - Accessing project-specific documentation and APIs
 - Integrating with build systems and test runners
 - Providing real-time code intelligence
 
+**Note**: MCP is an emerging technology. Verify the latest documentation and available servers at [modelcontextprotocol.io](https://modelcontextprotocol.io/) as implementations may evolve.
+
 ### Recommended MCP Servers for This Project
+
+The following are examples of MCP servers that could enhance AI capabilities. Check availability and compatibility before implementation:
 
 #### 1. Filesystem MCP Server
 **Purpose**: Give AI context about project structure and files
