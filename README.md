@@ -222,3 +222,80 @@ git commit -m "refactor: improve HID device discovery logic"
 ```
 
 Invalid commit messages will be rejected before the commit is created.
+
+## AI-Assisted Development
+
+This project includes comprehensive guidelines for using GitHub Copilot and other AI tools effectively while maintaining code quality and consistency.
+
+### AI Guidelines and Configuration
+
+The `.github/` directory contains several files to help AI tools understand and follow project standards:
+
+- **[copilot-instructions.md](.github/copilot-instructions.md)**: Comprehensive guidelines covering TypeScript, code style, architecture, security, and best practices
+- **[copilot.yml](.github/copilot.yml)**: GitHub Copilot configuration with quick reference to project rules
+- **[ai-prompts.md](.github/ai-prompts.md)**: Ready-to-use prompt templates for common development tasks
+- **[copilot-mcp.json](.github/copilot-mcp.json)**: Model Context Protocol (MCP) server configuration for advanced AI integration
+- **[README.md](.github/README.md)**: Complete guide to using AI tools with this project
+
+### Using GitHub Copilot
+
+GitHub Copilot will automatically read the configuration files in `.github/` and provide suggestions that follow project standards. Key things Copilot knows about this project:
+
+✅ **Strict TypeScript** with explicit return types and no `any`  
+✅ **ES Modules** with `.js` extensions in imports  
+✅ **Prettier formatting** (100 chars, single quotes, semicolons)  
+✅ **ESLint rules** (zero warnings tolerance)  
+✅ **Conventional commits** format  
+✅ **Project architecture** and naming conventions  
+✅ **Security best practices** and input validation  
+
+### Quick Start with AI
+
+1. **Read the guidelines**: Start with [.github/copilot-instructions.md](.github/copilot-instructions.md)
+2. **Use prompt templates**: Reference [.github/ai-prompts.md](.github/ai-prompts.md) for common tasks
+3. **Review suggestions**: Always review and test AI-generated code
+4. **Follow standards**: Ensure code passes linting, type checking, and formatting
+
+### Example AI Prompts
+
+```
+# Creating a new module
+Create a TypeScript module for retry logic in src/utils/retry.ts that:
+- Uses exponential backoff with configurable max retries
+- Includes explicit return types and proper error handling
+- Follows the project's ESLint and Prettier rules
+
+# Refactoring code
+Refactor src/devices/hidReader.ts to:
+- Extract buffer parsing into a separate AsciiParser class
+- Add proper TypeScript types for all functions
+- Maintain backward compatibility
+
+# Adding tests
+Create unit tests for src/utils/backoff.ts that:
+- Test happy path and error conditions
+- Use descriptive test names following AAA pattern
+- Mock dependencies appropriately
+```
+
+### MCP Integration (Advanced)
+
+For enhanced AI capabilities, consider setting up Model Context Protocol (MCP) servers:
+
+- **Filesystem Server**: Access project files and structure
+- **GitHub Server**: Integrate with issues and pull requests
+- **Git Server**: Interact with repository history
+- **Memory Server**: Maintain context across sessions
+
+See [.github/README.md](.github/README.md#mcp-server-setup) for detailed setup instructions.
+
+### Best Practices
+
+- ✅ Always review AI-generated code against project standards
+- ✅ Run `yarn lint` and `yarn typecheck` after AI suggestions
+- ✅ Use conventional commit messages
+- ✅ Test all changes thoroughly
+- ✅ Provide clear context when prompting AI tools
+- ❌ Don't blindly accept suggestions without understanding them
+- ❌ Don't skip code review for AI-generated code
+- ❌ Don't bypass linting or type checking
