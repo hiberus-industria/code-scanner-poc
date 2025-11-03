@@ -2,8 +2,6 @@
 
 **Descripción:** Implementación de un servicio en segundo plano para la lectura de códigos de barras con el dispositivo Honeywell Voyager 1202g (lector láser 1D) + base CCB00-010BT. Aunque el objetivo final es la lectura de códigos 2D (QR/DataMatrix), el hardware disponible limita la POC a simbologías 1D (Code 128, Code 39, EAN, UPC). Se utilizarán protocolos estándares (HID Bar Code Scanner ASCII) para garantizar compatibilidad sin cambios en el código al migrar a hardware 2D (ej. imager Voyager 1450g/1470g) en fases futuras.
 
----
-
 ## 1. Alcance
 
 **En el ámbito de la POC:**
@@ -19,8 +17,6 @@
 - Lectura 2D.
 - UI gráfica (solo CLI/logs y `/health` opcional).
 - Seguridad E2E más allá de configuración básica.
-
----
 
 ## 2. Modos de conexión del lector
 
@@ -82,8 +78,6 @@ El lector Honeywell 1202g se conecta mediante USB y expone diferentes perfiles d
 
 **Decisión final:** **HID Bar Code Scanner (ASCII)** es el modo seleccionado por su simplicidad técnica, robustez en background, baja latencia y compatibilidad directa con hardware 2D futuro. Permite una arquitectura limpia basada en `node-hid` + buffer de líneas, sin dependencias de sistema operativo más allá del acceso HID.
 
----
-
 ## 3. Requisitos funcionales
 
 1. **Lectura en background:** Servicio/daemon sin UI ni foco.
@@ -94,8 +88,6 @@ El lector Honeywell 1202g se conecta mediante USB y expone diferentes perfiles d
 6. **Reconexión automática:** Ante desconexiones/hotplug.
 7. **Logs:** Trazabilidad de lecturas, errores y reconexiones.
 
----
-
 ## 4. Requisitos no funcionales
 
 - **Tecnologías:** Node.js LTS, TypeScript, Yarn.
@@ -103,8 +95,6 @@ El lector Honeywell 1202g se conecta mediante USB y expone diferentes perfiles d
 - **Portabilidad:** Windows (principal), Linux (opcional).
 - **Instalación como servicio:** Windows (script), Linux (systemd/PM2 opcional).
 - **Observabilidad:** Métricas básicas o `/health` HTTP local (opcional).
-
----
 
 ## 5. Criterios de aceptación
 
@@ -114,8 +104,6 @@ El lector Honeywell 1202g se conecta mediante USB y expone diferentes perfiles d
 - **CA-4:** >99.5% éxito en 500 escaneos Code 128 impresos.
 - **CA-5:** 500 eventos publicados con reintentos ante cortes.
 - **CA-6:** Documentación y scripts de despliegue entregados.
-
----
 
 ## 6. Arquitectura propuesta
 
@@ -169,8 +157,6 @@ export type ScanEvent = { code: string; symbology?: string; deviceId: string; ts
 2. `hidReader.open(device)` → eventos `scan`.
 3. `eventBus.publish(ScanEvent)` → retry/cola.
 
----
-
 ## 7. Configuración del lector
 
 - **Interfaz:** USB HID Bar Code Scanner (no Keyboard/POS).
@@ -178,8 +164,6 @@ export type ScanEvent = { code: string; symbology?: string; deviceId: string; ts
 - **Code ID:** Deshabilitado.
 - **Simbologías:** Code 128, Code 39, EAN, UPC.
 - **Reinicio:** Desconectar/reconectar base tras cambios.
-
----
 
 ## 8. Contrato de eventos (payload)
 
@@ -192,8 +176,6 @@ export type ScanEvent = { code: string; symbology?: string; deviceId: string; ts
 }
 ```
 
----
-
 ## 9. Entregables
 
 1. Repositorio TS + tests + README.
@@ -201,8 +183,6 @@ export type ScanEvent = { code: string; symbology?: string; deviceId: string; ts
 3. `.env.example`.
 4. Instalación como servicio (Windows/Linux).
 5. Resultados de pruebas (CA-1 a CA-6).
-
----
 
 ## 10. Plan de pruebas
 
@@ -212,13 +192,9 @@ export type ScanEvent = { code: string; symbology?: string; deviceId: string; ts
 - Fallos de red → reintentos.
 - 5 escaneos rápidos → orden/duplicados.
 
----
-
 ## 11. Dependencias sugeridas
 
 - `node-hid`, `pino`, `axios`/`undici`, `dotenv`, `zod`, `ts-node`, `typescript`.
-
----
 
 ## 12. Riesgos y mitigaciones
 
@@ -227,14 +203,10 @@ export type ScanEvent = { code: string; symbology?: string; deviceId: string; ts
 - **Path variable:** Caché + descubrimiento.
 - **1D en pantallas:** Imprimir códigos; 2D en futuro.
 
----
-
 ## 13. Criterio de go/no-go
 
 - Lectura estable, sin interferencia, eventos fiables.
 - Código modular, documentado, desplegable.
-
----
 
 ## 14. Anexos
 
