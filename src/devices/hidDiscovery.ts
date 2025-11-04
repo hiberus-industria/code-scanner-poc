@@ -1,7 +1,17 @@
 import HID from 'node-hid';
 
-// eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-export async function listHidDevices() {
+//Exportamos la función para listar todos los dispositivos con el vendorId introducido.
+export async function listHidDevices(vendorId: number): Promise<void> {
+  //Recogemos todos los dispositivos
   const devices = await HID.devicesAsync();
-  console.log(devices);
+
+  //Filtramos por vendorId
+  const filtered = devices.filter((device) => device.vendorId === vendorId);
+
+  //Control si lo recoge quiero que me diga que no lo recoge si lo recoge que los muestre
+  if (filtered.length === 0) {
+    console.warn('No se ha encontrado ningun dispositivo');
+  } else {
+    console.log(filtered);
+  }
 }
