@@ -1020,6 +1020,7 @@ __metadata:
     eslint-plugin-prettier: "npm:^5.5.4"
     husky: "npm:^9.1.7"
     lint-staged: "npm:^16.2.6"
+    node-hid: "npm:^3.2.0"
     prettier: "npm:^3.6.2"
     tsx: "npm:^4.20.6"
     typescript: "npm:^5.9.3"
@@ -2375,6 +2376,15 @@ __metadata:
   languageName: node
   linkType: hard
 
+"node-addon-api@npm:^3.2.1":
+  version: 3.2.1
+  resolution: "node-addon-api@npm:3.2.1"
+  dependencies:
+    node-gyp: "npm:latest"
+  checksum: 10/681b52dfa3e15b0a8e5cf283cc0d8cd5fd2a57c559ae670fcfd20544cbb32f75de7648674110defcd17ab2c76ebef630aa7d2d2f930bc7a8cc439b20fe233518
+  languageName: node
+  linkType: hard
+
 "node-gyp@npm:latest":
   version: 11.5.0
   resolution: "node-gyp@npm:11.5.0"
@@ -2392,6 +2402,19 @@ __metadata:
   bin:
     node-gyp: bin/node-gyp.js
   checksum: 10/15a600b626116e1e528c49f73027c5ff84dbf6986df77b0fb61d6eb079ab4230c39f245295cb67f0590e6541a848cbd267e00c5769e8fb8bf88a5cca3701b551
+  languageName: node
+  linkType: hard
+
+"node-hid@npm:^3.2.0":
+  version: 3.2.0
+  resolution: "node-hid@npm:3.2.0"
+  dependencies:
+    node-addon-api: "npm:^3.2.1"
+    node-gyp: "npm:latest"
+    pkg-prebuilds: "npm:^1.0.0"
+  bin:
+    hid-showdevices: src/show-devices.js
+  checksum: 10/c3315767976ca320dd6a7e98b569f3a72b77483e69ec5067588dd83841ca20278bb735bfab8bb752511afcac50460495623c91669f94e3c5ac9e2faf3946f14f
   languageName: node
   linkType: hard
 
@@ -2558,6 +2581,18 @@ __metadata:
   bin:
     pidtree: bin/pidtree.js
   checksum: 10/ea67fb3159e170fd069020e0108ba7712df9f0fd13c8db9b2286762856ddce414fb33932e08df4bfe36e91fe860b51852aee49a6f56eb4714b69634343add5df
+  languageName: node
+  linkType: hard
+
+"pkg-prebuilds@npm:^1.0.0":
+  version: 1.0.0
+  resolution: "pkg-prebuilds@npm:1.0.0"
+  dependencies:
+    yargs: "npm:^17.7.2"
+  bin:
+    pkg-prebuilds-copy: bin/copy.mjs
+    pkg-prebuilds-verify: bin/verify.mjs
+  checksum: 10/219e0ef0d3b8f010900bfcf23e6ebb31774b0b375a3be3b3c6d0dcefb7a388747d4987bdbb9b9c388b89f2b570846b5df696f93d7f5e36a652658edc8d118aab
   languageName: node
   linkType: hard
 
@@ -3140,7 +3175,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"yargs@npm:^17.0.0":
+"yargs@npm:^17.0.0, yargs@npm:^17.7.2":
   version: 17.7.2
   resolution: "yargs@npm:17.7.2"
   dependencies:
