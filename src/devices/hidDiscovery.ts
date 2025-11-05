@@ -9,9 +9,10 @@ function saveDevice(filtered: HID.Device[]): void {
   try {
     if (!fs.existsSync(filePath)) {
       fs.writeFileSync(filePath, jsonString);
-    } else {
-      fs.writeFileSync('devices.json', jsonString);
+      return;
     }
+
+    fs.writeFileSync('devices.json', jsonString);
   } catch (err) {
     console.error('Error writing file:', err);
   }
@@ -20,21 +21,21 @@ function saveDevice(filtered: HID.Device[]): void {
 //We export the function to list all devices with the entered vendorId.
 export async function listHidDevices(vendorId: number, productId: string): Promise<void> {
   //We collect all the devices
-  const devices = await HID.devicesAsync();
 
-  //We filter by vendorId
-  const filtered = devices.filter(
-    (device) => device.vendorId === vendorId && device.product === productId
-  );
+  let filtered: HID.Device[] = [];
 
-  saveDevice(filtered);
+  while (filtered.length === 0) {
+    const devices = await HID.devicesAsync();
+    filtered = devices.filter(
+      (device) => device.vendorId === vendorId && device.product === productId
+    );
 
-  //Check if he picks it up; I want him to tell me if he doesn't pick it up, and if he does pick it up, show them.
-  if (filtered.length === 0) {
-    console.warn('No se ha encontrado ningun dispositivo');
-    return;
+    if (filtered.length > 0) {
+      saveDevice(filtered);
+      console.log('Dispositivo detectado');
+      break;
+    }
+    console.warn('Dispositivo no detectado');
+    await new Promise((resolve) => setTimeout(resolve, 1000));
   }
-
-  // eslint-disable-next-line no-console
-  console.log(filtered);
 }
