@@ -2,7 +2,7 @@ import HID from 'node-hid';
 import fs from 'fs';
 import path from 'path';
 import { EventEmitter } from 'events';
-import logger from '../infra/logger.js';
+import { logger } from '../infra/logger.js';
 
 function saveDevice(found: HID.Device[]): void {
   const jsonString = JSON.stringify(found, null, 2);
@@ -10,44 +10,37 @@ function saveDevice(found: HID.Device[]): void {
 
   try {
     fs.writeFileSync(filePath, jsonString);
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
     logger.info(`Device information saved to ${filePath}`);
   } catch (err) {
-    console.error('Error writing file:', err);
+    logger.error({ err }, 'Error writing file');
   }
 }
 
 export const hidEmitter = new EventEmitter();
 
 let isConnected = false;
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-let currentPath: string | null = null;
 let serialNumber: string | undefined;
 
-let filtered: HID.Device[] = [];
+let intervalId: NodeJS.Timeout | null = null;
 
-export function listHidDevices(vendorId: number, productName: string): void {
+export function listHidDevices(vendorId: number, productName: string): () => void {
   // eslint-disable-next-line @typescript-eslint/no-misused-promises
-  setInterval(async () => {
+  intervalId = setInterval(async () => {
     let devices: HID.Device[] = [];
 
     try {
       devices = await HID.devicesAsync();
     } catch (e) {
-      console.error('Error scanning devices:', e);
+      logger.error({ err: e }, 'Error scanning devices');
       return;
     }
 
-    filtered = devices.filter(
+    const filtered = devices.filter(
       (device) => device.vendorId === vendorId && device.product === productName
     );
 
     if (filtered.length === 0) {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
       logger.warn('No HID devices found with the specified criteria.');
-    } else {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
-      logger.info({ event: 'device_connected', deviceId: serialNumber });
     }
 
     const found = filtered[0];
@@ -55,7 +48,6 @@ export function listHidDevices(vendorId: number, productName: string): void {
     // --- Disconnected ---
     if (isConnected && !found) {
       isConnected = false;
-      currentPath = null;
       // Keep serialNumber so we can reconnect later
       hidEmitter.emit('device:disconnected');
       return;
@@ -71,7 +63,7 @@ export function listHidDevices(vendorId: number, productName: string): void {
       // If we have a saved serialNumber, compare it
       if (found.serialNumber === serialNumber) {
         isConnected = true;
-        currentPath = found.path ?? null;
+        logger.info({ event: 'device_reconnected', deviceId: found.serialNumber });
         hidEmitter.emit('device:reconnect', found);
         return;
       }
@@ -80,11 +72,19 @@ export function listHidDevices(vendorId: number, productName: string): void {
     // --- Connected for the first time ---
     if (!isConnected) {
       isConnected = true;
-      currentPath = found.path ?? null;
       serialNumber = found.serialNumber; // Save the serial number for future reconnections
+      logger.info({ event: 'device_connected', deviceId: found.serialNumber });
       saveDevice(filtered);
       hidEmitter.emit('device:connected', found);
       return;
     }
   }, 1000);
+
+  // Return cleanup function
+  return () => {
+    if (intervalId !== null) {
+      clearInterval(intervalId);
+      intervalId = null;
+    }
+  };
 }
