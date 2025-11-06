@@ -44,7 +44,7 @@ export function listHidDevices(vendorId: number, productName: string): void {
 
     if (filtered.length === 0) {
       // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
-      logger.warn('No se encontraron dispositivos HID con los criterios especificados.');
+      logger.warn('No HID devices found with the specified criteria.');
     } else {
       // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
       logger.info({ event: 'device_connected', deviceId: serialNumber });
@@ -52,26 +52,24 @@ export function listHidDevices(vendorId: number, productName: string): void {
 
     const found = filtered[0];
 
-    // --- Desconectado ---
+    // --- Disconnected ---
     if (isConnected && !found) {
-      console.warn('disconnect');
       isConnected = false;
       currentPath = null;
-      // Mantenemos serialNumber para poder reconectar después
+      // Keep serialNumber so we can reconnect later
       hidEmitter.emit('device:disconnected');
       return;
     }
 
-    // Si no hay dispositivo, no hay más que hacer
+    // If no device is found, there’s nothing else to do
     if (!found) {
       return;
     }
 
-    // --- Reconectado ---
+    // --- Reconnected ---
     if (!isConnected && serialNumber) {
-      // Si tenemos un serialNumber guardado, comparamos
+      // If we have a saved serialNumber, compare it
       if (found.serialNumber === serialNumber) {
-        console.warn('reconnect - matched by serial number');
         isConnected = true;
         currentPath = found.path ?? null;
         hidEmitter.emit('device:reconnect', found);
@@ -79,11 +77,11 @@ export function listHidDevices(vendorId: number, productName: string): void {
       }
     }
 
-    // --- Conectado por primera vez ---
+    // --- Connected for the first time ---
     if (!isConnected) {
       isConnected = true;
       currentPath = found.path ?? null;
-      serialNumber = found.serialNumber; // Guardamos el serial para futuras reconexiones
+      serialNumber = found.serialNumber; // Save the serial number for future reconnections
       saveDevice(filtered);
       hidEmitter.emit('device:connected', found);
       return;
