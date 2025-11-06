@@ -2,6 +2,7 @@ import HID from 'node-hid';
 import fs from 'fs';
 import path from 'path';
 import { EventEmitter } from 'events';
+import logger from '../infra/logger.js';
 
 function saveDevice(found: HID.Device[]): void {
   const jsonString = JSON.stringify(found, null, 2);
@@ -9,6 +10,8 @@ function saveDevice(found: HID.Device[]): void {
 
   try {
     fs.writeFileSync(filePath, jsonString);
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
+    logger.info(`Device information saved to ${filePath}`);
   } catch (err) {
     console.error('Error writing file:', err);
   }
@@ -39,6 +42,14 @@ export function listHidDevices(vendorId: number, productName: string): void {
       (device) => device.vendorId === vendorId && device.product === productName
     );
 
+    if (filtered.length === 0) {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
+      logger.warn('No se encontraron dispositivos HID con los criterios especificados.');
+    } else {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
+      logger.info({ event: 'device_connected', deviceId: serialNumber });
+    }
+
     const found = filtered[0];
 
     // --- Desconectado ---
@@ -48,7 +59,7 @@ export function listHidDevices(vendorId: number, productName: string): void {
       currentPath = null;
       // Mantenemos serialNumber para poder reconectar después
       hidEmitter.emit('device:disconnected');
-      return; // Importante: retorno temprano
+      return;
     }
 
     // Si no hay dispositivo, no hay más que hacer
@@ -64,7 +75,7 @@ export function listHidDevices(vendorId: number, productName: string): void {
         isConnected = true;
         currentPath = found.path ?? null;
         hidEmitter.emit('device:reconnect', found);
-        return; // Importante: retorno temprano
+        return;
       }
     }
 
@@ -75,7 +86,7 @@ export function listHidDevices(vendorId: number, productName: string): void {
       serialNumber = found.serialNumber; // Guardamos el serial para futuras reconexiones
       saveDevice(filtered);
       hidEmitter.emit('device:connected', found);
-      return; // Importante: retorno temprano
+      return;
     }
   }, 1000);
 }
