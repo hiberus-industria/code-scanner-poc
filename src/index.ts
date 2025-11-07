@@ -1,18 +1,23 @@
 import { hidEmitter, listHidDevices } from './devices/hidDiscovery.js';
+import { logger } from './infra/logger.js';
 
-const vendorId = parseInt(process.env['VENDOR_ID'] ?? '');
+const vendorIdRaw = process.env['VENDOR_ID'];
+if (vendorIdRaw === undefined || vendorIdRaw.trim() === '' || Number.isNaN(Number(vendorIdRaw))) {
+  throw new Error('VENDOR_ID environment variable must be set to a valid integer string.');
+}
+const vendorId = parseInt(vendorIdRaw, 10);
 const productId = process.env['PRODUCT'] ?? '';
 
 hidEmitter.on('device:connected', () => {
-  console.log('Evento → Conectado:');
+  logger.info('Event → Connected');
 });
 
 hidEmitter.on('device:reconnect', () => {
-  console.log('Evento → Reconectado:');
+  logger.info('Event → Reconnected');
 });
 
 hidEmitter.on('device:disconnected', () => {
-  console.log('Evento → Desconectado');
+  logger.info('Event → Disconnected');
 });
 
 listHidDevices(vendorId, productId);
