@@ -12,11 +12,9 @@ if (Number.isNaN(vendorId)) {
   throw new Error(`VENDOR_ID is not a valid number: "${vendorIdRaw}"`);
 }
 
-const productIdRaw = process.env['PRODUCT_ID'];
+const productIdRaw = process.env['PRODUCT'];
 if (!productIdRaw) throw new Error('PRODUCT_ID must be set');
-const productId = productIdRaw.trim().toLowerCase().startsWith('0x')
-  ? parseInt(productIdRaw, 16)
-  : parseInt(productIdRaw, 10);
+const productId = productIdRaw;
 
 if (Number.isNaN(productId)) {
   throw new Error(`PRODUCT_ID is not a valid number: "${productIdRaw}"`);

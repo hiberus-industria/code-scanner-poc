@@ -8,9 +8,9 @@ export class HidReader extends EventEmitter {
   private device: HID.HID | null = null;
   private buffer: Buffer = Buffer.alloc(0);
   private vendorId: number;
-  private productId: number;
+  private productId: string;
 
-  constructor(vendorId: number, productId: number) {
+  constructor(vendorId: number, productId: string) {
     super();
     this.vendorId = vendorId;
     this.productId = productId;
@@ -28,7 +28,7 @@ export class HidReader extends EventEmitter {
       const found = devices.find(
         (d) =>
           d.vendorId === this.vendorId &&
-          (d.productId === this.productId || d.product === process.env['PRODUCT'])
+          (d.product === this.productId || d.product === process.env['PRODUCT'])
       );
 
       if (!found?.path) {
@@ -60,6 +60,10 @@ export class HidReader extends EventEmitter {
   }
 
   //Cleans incoming data and filters out invalid bytes
+
+  private flushTimer?: NodeJS.Timeout | undefined;
+  private readonly FLUSH_TIMEOUT = 100; // ajusta según tu escáner (50-200ms típico)
+
   private onData(data: Buffer): void {
     // Filter valid bytes (printable ASCII + carriage return)
     const clean = Buffer.from(
@@ -70,26 +74,55 @@ export class HidReader extends EventEmitter {
     // Append new bytes to internal buffer
     this.buffer = Buffer.concat([this.buffer, clean]);
 
+    // Cancel previous timer - estamos recibiendo más datos
+    if (this.flushTimer) {
+      clearTimeout(this.flushTimer);
+      this.flushTimer = undefined;
+    }
+
     // Process complete lines (terminated by CR = 0x0D)
     let idx = this.buffer.indexOf(0x0d);
     while (idx !== -1) {
-      const line = Buffer.from(this.buffer.subarray(0, idx))
-        .toString('utf8')
-        .replace(/\0/g, '')
-        .trim();
+      const line = this.buffer.subarray(0, idx).toString('utf8').replace(/\x00/g, '').trim();
 
       if (line.length) this.emit('scan:raw', line);
 
-      // Advance buffer after CR, create a copy to avoid shared memory
       this.buffer = Buffer.from(this.buffer.subarray(idx + 1));
-
       idx = this.buffer.indexOf(0x0d);
+    }
+
+    //if the buffer isnt empty (without CR) runs a flush
+
+    if (this.buffer.length > 0) {
+      this.flushTimer = setTimeout(() => {
+        if (this.buffer.length > 0) {
+          const line = this.buffer.toString('utf8').replace(/\x00/g, '').trim().slice(0, -1);
+
+          if (line.length) this.emit('scan:raw', line);
+          this.buffer = Buffer.alloc(0);
+        }
+        this.flushTimer = undefined;
+      }, this.FLUSH_TIMEOUT);
     }
 
     // Limit buffer size to avoid excessive growth
     const MAX_BUFFER = 16 * 1024;
     if (this.buffer.length > MAX_BUFFER) {
       this.buffer = Buffer.from(this.buffer.subarray(this.buffer.length - MAX_BUFFER));
+    }
+  }
+
+  ///call when closing the port
+  public destroy(): void {
+    if (this.flushTimer) {
+      clearTimeout(this.flushTimer);
+      this.flushTimer = undefined;
+    }
+    //process any existing data available
+    if (this.buffer.length > 0) {
+      const line = this.buffer.toString('utf8').replace(/\x00/g, '').trim();
+      if (line.length) this.emit('scan:raw', line);
+      this.buffer = Buffer.alloc(0);
     }
   }
 }
