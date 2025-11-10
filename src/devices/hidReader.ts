@@ -75,8 +75,7 @@ export class HidReader extends EventEmitter {
     while (idx !== -1) {
       const line = Buffer.from(this.buffer.subarray(0, idx))
         .toString('utf8')
-        // eslint-disable-next-line no-control-regex
-        .replace(/\x00/g, '')
+        .replace(/\0/g, '')
         .trim();
 
       if (line.length) this.emit('scan:raw', line);
