@@ -45,26 +45,21 @@ export class HidReader extends EventEmitter {
   private _processBuffer(): void {
     const MAX_BUFFER = 16 * 1024;
 
-    // Limita el tamaño del buffer (por seguridad)
+    // limits buffer
     if (this.buffer.length > MAX_BUFFER) {
       this.buffer = Buffer.from(this.buffer.subarray(this.buffer.length - MAX_BUFFER));
     }
 
-    // Si ya hay un temporizador, lo reiniciamos (esperar más datos)
     if (this.flushTimer) clearTimeout(this.flushTimer);
 
-    // Programamos un flush único después del timeout
     this.flushTimer = setTimeout(() => {
-      // Buscar líneas completas separadas por \r
       const parts = this.buffer.toString().split(String.fromCharCode(CARRIAGE_RETURN));
 
-      // Procesar todas las partes menos la última si está vacía
       for (const part of parts) {
         const line = this._cleanLine(Buffer.from(part));
         if (line.length) this.emit('scan:raw', line);
       }
 
-      // Vaciar buffer y limpiar el temporizador
       this.buffer = Buffer.alloc(0);
       this.flushTimer = undefined;
     }, this.FLUSH_TIMEOUT);
