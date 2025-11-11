@@ -76,12 +76,7 @@ export class HidReader extends EventEmitter {
     return raw
       .toString('utf8')
       .replace(/\x00/g, '') // remove null bytes
-      .trim() // trim surrounding whitespace
-      .replace(/^\]E0/, '') // remove AIM prefix for EAN/UPC
-      .replace(/^\]C1/, '') // remove AIM prefix for Code128
-      .replace(/^E/, '') // remove residual 'E' prefix
-      .replace(/d$/, '') // remove trailing 'd'
-      .trim();
+      .trim(); // trim surrounding whitespac
   }
 
   /**
