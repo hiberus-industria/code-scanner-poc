@@ -4,23 +4,10 @@ import path from 'path';
 import { EventEmitter } from 'events';
 import { logger } from '../infra/logger.js';
 
-function saveDevice(found: HID.Device[]): void {
-  const jsonString = JSON.stringify(found, null, 2);
-  const filePath = path.resolve('./devices.json');
-
-  try {
-    fs.writeFileSync(filePath, jsonString);
-    logger.info(`Device information saved to ${filePath}`);
-  } catch (err) {
-    logger.error({ err }, 'Error writing file');
-  }
-}
-
 export const hidEmitter = new EventEmitter();
 
 let isConnected = false;
 let serialNumber: string | undefined;
-
 let intervalId: NodeJS.Timeout | null = null;
 
 export function listHidDevices(vendorId: number, productName: string): () => void {
@@ -87,4 +74,16 @@ export function listHidDevices(vendorId: number, productName: string): () => voi
       intervalId = null;
     }
   };
+}
+
+function saveDevice(found: HID.Device[]): void {
+  const jsonString = JSON.stringify(found, null, 2);
+  const filePath = path.resolve('./devices.json');
+
+  try {
+    fs.writeFileSync(filePath, jsonString);
+    logger.info(`Device information saved to ${filePath}`);
+  } catch (err) {
+    logger.error({ err }, 'Error writing file');
+  }
 }

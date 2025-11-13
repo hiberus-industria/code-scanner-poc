@@ -1,57 +1,68 @@
 import { hidEmitter, listHidDevices } from './devices/hidDiscovery.js';
-import { HidReader } from './devices/hidReader.js';
-import { logger } from './infra/logger.js';
+import { parseHidData, parserEmitter } from './devices/hidParser.js';
+import HID from 'node-hid';
 
+const HEX_START = '0x';
 const vendorIdRaw = process.env['VENDOR_ID'];
 if (!vendorIdRaw) throw new Error('VENDOR_ID must be set');
-const vendorId = vendorIdRaw.trim().toLowerCase().startsWith('0x')
-  ? parseInt(vendorIdRaw, 16)
-  : parseInt(vendorIdRaw, 10);
 
+let vendorId = Number(vendorIdRaw);
+if (vendorIdRaw.trim().toLowerCase().startsWith(HEX_START)) {
+  vendorId = parseInt(vendorIdRaw, 16);
+}
 if (Number.isNaN(vendorId)) {
   throw new Error(`VENDOR_ID is not a valid number: "${vendorIdRaw}"`);
 }
 
-const productIdRaw = process.env['PRODUCT_ID'];
-if (!productIdRaw) throw new Error('PRODUCT_ID must be set');
-const productId = productIdRaw.trim().toLowerCase().startsWith('0x')
-  ? parseInt(productIdRaw, 16)
-  : parseInt(productIdRaw, 10);
+const productName = process.env['PRODUCT'];
+if (!productName) throw new Error('PRODUCT must be set');
 
-if (Number.isNaN(productId)) {
-  throw new Error(`PRODUCT_ID is not a valid number: "${productIdRaw}"`);
+let currentDevice: HID.HID | null = null;
+
+// Global listener for parsed lines
+parserEmitter.on('raw:scan', (line: string) => {
+  console.log('Readed code:', line);
+});
+
+// Initial connection
+hidEmitter.on('device:connected', (found) => {
+  cleanupDevice(currentDevice);
+  try {
+    currentDevice = new HID.HID(found.path);
+    currentDevice.on('data', (data: Buffer) => parseHidData(data));
+    currentDevice.on('error', () => cleanupDevice(currentDevice));
+  } catch {}
+});
+
+// Reconnect
+hidEmitter.on('device:reconnect', (found) => {
+  cleanupDevice(currentDevice);
+  try {
+    currentDevice = new HID.HID(found.path);
+    currentDevice.on('data', (data: Buffer) => parseHidData(data));
+    currentDevice.on('error', () => cleanupDevice(currentDevice));
+  } catch {}
+});
+
+// Disconnect
+hidEmitter.on('device:disconnected', () => {
+  cleanupDevice(currentDevice);
+});
+
+// Device cleanup
+function cleanupDevice(device: HID.HID | null) {
+  if (!device) return;
+  device.removeAllListeners();
+  try {
+    device.close();
+  } catch {}
+  if (device === currentDevice) currentDevice = null;
 }
 
-const productName = process.env['PRODUCT'] ?? '';
-
-const reader = new HidReader(vendorId, productId);
-
-reader.on('scan:raw', (line) => {
-  logger.info(`Código leído: ${line}`);
-});
-
-reader.on('error', (err) => {
-  logger.error({ err }, 'Error en HID');
-});
-
-hidEmitter.on('device:connected', () => {
-  logger.info('Event → Connected');
-  reader.start();
-});
-
-hidEmitter.on('device:reconnect', () => {
-  logger.info('Event → Reconnected');
-  reader.start();
-});
-
-hidEmitter.on('device:disconnected', () => {
-  logger.info('Event → Disconnected');
-  reader.stop();
-});
-
+// init discovery
 listHidDevices(vendorId, productName);
 
 process.on('SIGINT', () => {
-  reader.stop();
+  cleanupDevice(currentDevice);
   process.exit(0);
 });
