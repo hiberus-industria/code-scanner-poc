@@ -13,7 +13,7 @@ type Symbology =
   | 'UNKNOWN';
 
 function simbologyDetection(barcode: string): Symbology {
-  const clean = barcode.trim().slice(1, -1);
+  const clean = barcode.trim();
 
   if (/^\d+$/.test(clean)) {
     if (clean.length === 12) return 'UPC-A';
@@ -129,41 +129,33 @@ function checkSumCode128B(barcode: string): number {
 
   return sumaCodeB % 103;
 }
-
 function validateCode128C(barcode: string): number {
   const startCodeValue = 105;
-  const stopValue = 106;
-  const chars = barcode.split('').map((n) => Number(n));
 
   if (!/^\d+$/.test(barcode)) {
-    throw new Error('Invalid characters for Code 128C');
+    throw new Error('Invalid characters for Code128-C');
+  }
+  if (barcode.length % 2 !== 0) {
+    throw new Error('Code128-C must have an even number of digits');
   }
 
-  if (chars.length % 2 !== 0) {
-    throw new Error('Code 128C must have an even number of digits');
-  }
-
-  if (chars[0] !== startCodeValue || chars[chars.length - 1] !== stopValue) {
-    throw new Error('Invalid start/stop code in Code 128C');
-  }
-
-  const values: number[] = [];
-  for (let i = 0; i < chars.length; i += 2) {
-    const pair = chars.slice(i, i + 2);
-    values.push(parseInt(pair.join(''), 10));
+  // Convertir pares
+  const values = [];
+  for (let i = 0; i < barcode.length; i += 2) {
+    values.push(Number(barcode.slice(i, i + 2)));
   }
 
   let checksum = startCodeValue;
 
   for (let i = 0; i < values.length; i++) {
-    checksum += (chars[i] ?? 0) * (i + 1);
+    checksum += (values[i] ?? 0) * (i + 1);
   }
 
   return checksum % 103;
 }
 
 export function validateBarCode(barcode: string): void {
-  barcode = barcode.trim().slice(1, -1); // Remove start/stop characters
+  barcode = barcode.trim(); // Remove start/stop characters
   const type = simbologyDetection(barcode); //Pick code symbology
   let valid = false;
 
@@ -176,8 +168,10 @@ export function validateBarCode(barcode: string): void {
       }
 
       const checkSumMod10 = mod10CheckSum(toValidateCode);
-      const actual = Number(barcode.slice(-1));
-      valid = checkSumMod10 === actual;
+
+      if (checkSumMod10 === Number(barcode.slice(-1))) {
+        valid = true;
+      }
     } else if (['Code128-A', 'Code128-B', 'Code128-C'].includes(type)) {
       let checkSum: number;
       let actual: number;
@@ -185,21 +179,27 @@ export function validateBarCode(barcode: string): void {
         case 'Code128-A':
           checkSum = checkSumCode128A(barcode);
           actual = Number(barcode.charCodeAt(barcode.length - 1));
-          valid = checkSum === actual;
+          if (checkSum === actual) {
+            valid = true;
+          }
           break;
         case 'Code128-B':
           checkSum = checkSumCode128B(barcode);
           actual = Number(barcode.charCodeAt(barcode.length - 1)) - 32;
-          valid = checkSum === actual;
+          if (checkSum === actual) {
+            valid = true;
+          }
           break;
         case 'Code128-C':
           checkSum = validateCode128C(barcode);
           actual = Number(barcode.charCodeAt(barcode.length - 1));
-          valid = checkSum === actual;
+          if (checkSum === actual) {
+            valid = true;
+          }
           break;
       }
 
-      barCodeEmitter.emit('code:valideted', {
+      barCodeEmitter.emit('code:validated', {
         barcode,
         simbology: type,
         valid,
