@@ -76,5 +76,3 @@ process.on('SIGINT', () => {
   cleanupDevice(currentDevice);
   process.exit(0);
 });
-
-validateBarCode(']E012345ABCDE<I');
