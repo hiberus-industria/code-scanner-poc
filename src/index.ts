@@ -1,3 +1,4 @@
+import { barCodeEmitter, validateBarCode } from './devices/barCodeValidator.js';
 import { hidEmitter, listHidDevices } from './devices/hidDiscovery.js';
 import { parseHidData, parserEmitter } from './devices/hidParser.js';
 import HID from 'node-hid';
@@ -21,7 +22,16 @@ let currentDevice: HID.HID | null = null;
 
 // Global listener for parsed lines
 parserEmitter.on('raw:scan', (line: string) => {
-  console.log('Readed code:', line);
+  validateBarCode(line);
+});
+
+barCodeEmitter.on('code:validated', ({ barcode, simbology, valid, ts }) => {
+  if (!valid) {
+    console.warn(`Invalid barcode deteceted: ${barcode}`);
+  } else {
+    console.log(`Symbology: ${simbology} | The barcode is valid | Timestamp: ${ts}`);
+    console.log(`Scanned Code: ${barcode}`);
+  }
 });
 
 // Initial connection
