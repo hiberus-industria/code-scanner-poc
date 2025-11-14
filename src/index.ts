@@ -23,10 +23,9 @@ let currentDevice: HID.HID | null = null;
 // Global listener for parsed lines
 parserEmitter.on('raw:scan', (line: string) => {
   validateBarCode(line);
-  console.log(`Scanned raw data: ${line}`);
 });
 
-barCodeEmitter.on('code:valideted', ({ barcode, simbology, valid }) => {
+barCodeEmitter.on('code:validated', ({ barcode, simbology, valid }) => {
   console.log(
     `Scanned Code: ${barcode} | Symbology: ${simbology} | Valid: ${valid ? 'Yes' : 'No'}`
   );

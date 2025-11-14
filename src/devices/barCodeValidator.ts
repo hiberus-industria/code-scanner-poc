@@ -12,207 +12,231 @@ type Symbology =
   | 'UPC-E'
   | 'UNKNOWN';
 
-/*
- * SANITIZACIÓN REAL HID
- * Elimina TODO lo que no sea ASCII imprimible (32–126)
- */
+// Constantes descriptivas
+const ASCII_PRINTABLE_START = 32;
+const ASCII_PRINTABLE_END = 126;
+const CODE128_A_MAX = 95;
+const MOD_10 = 10;
 
 /*
  * DETECCIÓN DE SIMBOLOGÍA
+ * Identifica el tipo de código de barras basado en su contenido
  */
-function simbologyDetection(barcode: string): Symbology {
-  const isNumeric = /^\d+$/.test(barcode);
+function detectBarcodeSymbology(barcodeData: string): Symbology {
+  const isOnlyNumeric = /^\d+$/.test(barcodeData);
+  const barcodeLength = barcodeData.length;
 
-  // 1. GS1 prefixes Code128
-  if (barcode.startsWith(']C')) return 'Code128-C';
-  if (barcode.startsWith(']A')) return 'Code128-A';
-  if (barcode.startsWith(']B')) return 'Code128-B';
+  // GS1 AIM ID prefixes (estándar de scanners HID)
+  if (barcodeData.startsWith(']C')) return 'Code128-C';
+  if (barcodeData.startsWith(']A')) return 'Code128-A';
+  if (barcodeData.startsWith(']B')) return 'Code128-B';
 
-  // 2. EAN-13
-  if (isNumeric && barcode.length === 13) return 'EAN-13';
+  // EAN-13: exactamente 13 dígitos
+  if (isOnlyNumeric && barcodeLength === 13) return 'EAN-13';
 
-  // 3. UPC-A
-  if (isNumeric && barcode.length === 12) return 'UPC-A';
+  // UPC-A: exactamente 12 dígitos
+  if (isOnlyNumeric && barcodeLength === 12) return 'UPC-A';
 
-  // 4. UPC-E (antes que EAN-8)
-  if (isNumeric && barcode.length === 8 && (barcode[0] === '0' || barcode[0] === '1')) {
-    const exp = Number(barcode[6]);
-
-    if (exp >= 0 && exp <= 9) return 'UPC-E';
+  // UPC-E: exactamente 8 dígitos, comienza con 0 o 1
+  if (isOnlyNumeric && barcodeLength === 8 && (barcodeData[0] === '0' || barcodeData[0] === '1')) {
+    const expansionDigit = Number(barcodeData[6]);
+    if (expansionDigit >= 0 && expansionDigit <= 9) return 'UPC-E';
   }
 
-  // 5. EAN-8
-  if (isNumeric && barcode.length === 8) return 'EAN-8';
+  // EAN-8: exactamente 8 dígitos
+  if (isOnlyNumeric && barcodeLength === 8) return 'EAN-8';
 
-  // 6. Code128-C (numérico par)
-  if (isNumeric && barcode.length % 2 === 0) return 'Code128-C';
+  // Code128-C: solo números con longitud par
+  if (isOnlyNumeric && barcodeLength % 2 === 0) return 'Code128-C';
 
-  // 7. Code128-A (ASCII 32–95)
-  let isA = true;
-  for (let i = 0; i < barcode.length; i++) {
-    const cc = barcode.charCodeAt(i);
-    if (cc < 32 || cc > 95) {
-      isA = false;
-      break;
-    }
-  }
-  if (isA) return 'Code128-A';
+  // Code128-A: ASCII 32–95
+  if (isValidCode128A(barcodeData)) return 'Code128-A';
 
-  // 8. Code128-B (ASCII 32–126)
-  let isB = true;
-  for (let i = 0; i < barcode.length; i++) {
-    const cc = barcode.charCodeAt(i);
-    if (cc < 32 || cc > 126) {
-      isB = false;
-      break;
-    }
-  }
-  if (isB) return 'Code128-B';
+  // Code128-B: ASCII 32–126
+  if (isValidCode128B(barcodeData)) return 'Code128-B';
 
   return 'UNKNOWN';
 }
 
 /*
- * EXPANSIÓN UPC-E → UPC-A
+ * VALIDACIÓN CODE128-A
+ * Verifica que todos los caracteres estén en rango válido (32–95)
  */
-function expandUpcEtoUpcA(upce: string): string {
-  if (!/^\d{8}$/.test(upce)) throw new Error('Invalid UPC-E code');
+function isValidCode128A(barcodeData: string): boolean {
+  for (let charIndex = 0; charIndex < barcodeData.length; charIndex++) {
+    const charCode = barcodeData.charCodeAt(charIndex);
+    if (charCode < ASCII_PRINTABLE_START || charCode > CODE128_A_MAX) {
+      return false;
+    }
+  }
+  return true;
+}
 
-  const [n, m1, m2, m3, m4, m5, exp, checkDigit] = upce.split('');
+/*
+ * VALIDACIÓN CODE128-B
+ * Verifica que todos los caracteres estén en rango válido (32–126)
+ */
+function isValidCode128B(barcodeData: string): boolean {
+  for (let charIndex = 0; charIndex < barcodeData.length; charIndex++) {
+    const charCode = barcodeData.charCodeAt(charIndex);
+    if (charCode < ASCII_PRINTABLE_START || charCode > ASCII_PRINTABLE_END) {
+      return false;
+    }
+  }
+  return true;
+}
 
-  // UPC-E only exists for N = 0 or 1
-  if (n !== '0' && n !== '1') throw new Error('UPC-E must start with 0 or 1');
+/*
+ * VALIDACIÓN CODE128-C
+ * Verifica que sea solo números con longitud par
+ */
+function isValidCode128C(barcodeData: string): boolean {
+  const isNumericOnly = /^\d+$/.test(barcodeData);
+  const isEvenLength = barcodeData.length % 2 === 0;
+  return isNumericOnly && isEvenLength;
+}
 
-  let body = '';
+/*
+ * EXPANSIÓN UPC-E → UPC-A
+ * Convierte formato comprimido UPC-E (8 dígitos) a formato UPC-A (12 dígitos)
+ */
+function expandUpcEtoUpcA(upcEBarcode: string): string {
+  if (!/^\d{8}$/.test(upcEBarcode)) {
+    throw new Error('Invalid UPC-E code: must be exactly 8 digits');
+  }
 
-  switch (exp) {
+  const [
+    numberSystemDigit,
+    manufacturer1,
+    manufacturer2,
+    manufacturer3,
+    manufacturer4,
+    manufacturer5,
+    expansionDigit,
+    checkDigit,
+  ] = upcEBarcode.split('');
+
+  // UPC-E solo válido para 0 o 1
+  if (numberSystemDigit !== '0' && numberSystemDigit !== '1') {
+    throw new Error('UPC-E must start with 0 or 1');
+  }
+
+  let manufacturerCode = '';
+
+  // Expansión según dígito de expansión (posición 7)
+  switch (expansionDigit) {
     case '0':
     case '1':
     case '2':
-      body = `${n}${m1}${m2}${exp}0000${m3}${m4}${m5}`;
+      manufacturerCode = `${numberSystemDigit}${manufacturer1}${manufacturer2}${expansionDigit}0000${manufacturer3}${manufacturer4}${manufacturer5}`;
       break;
 
     case '3':
-      body = `${n}${m1}${m2}${m3}00000${m4}${m5}`;
+      manufacturerCode = `${numberSystemDigit}${manufacturer1}${manufacturer2}${manufacturer3}00000${manufacturer4}${manufacturer5}`;
       break;
 
     case '4':
-      body = `${n}${m1}${m2}${m3}${m4}00000${m5}`;
+      manufacturerCode = `${numberSystemDigit}${manufacturer1}${manufacturer2}${manufacturer3}${manufacturer4}00000${manufacturer5}`;
       break;
 
     default:
-      body = `${n}${m1}${m2}${m3}${m4}${m5}0000${exp}`;
+      manufacturerCode = `${numberSystemDigit}${manufacturer1}${manufacturer2}${manufacturer3}${manufacturer4}${manufacturer5}0000${expansionDigit}`;
       break;
   }
 
-  return body + checkDigit; // keep UPC-E check digit
+  return manufacturerCode + checkDigit;
 }
 
 /*
- * MOD10 GS1 CORREGIDO (EAN/UPC)
+ * CHECKSUM MOD10 (GS1)
+ * Calcula checksum para EAN/UPC usando algoritmo MOD10
+ * Algoritmo: desde la derecha, alterna multiplicadores 3 y 1
  */
-function mod10CheckSum(barcode: string): number {
-  const digits = barcode.split('').map(Number);
-  const data = digits.slice(0, -1); // remove check digit
+function calculateMod10Checksum(barcodeData: string): number {
+  const barcodeDigits = barcodeData.split('').map(Number);
+  const dataWithoutCheckDigit = barcodeDigits.slice(0, -1);
 
-  let sum = 0;
+  let checksumSum = 0;
+  let multiplicador = 3;
 
-  // Work from right to left, alternating 3 and 1
-  let weight = 3;
-
-  for (let i = data.length - 1; i >= 0; i--) {
-    sum += (data[i] ?? 0) * weight;
-    weight = weight === 3 ? 1 : 3;
+  // Procesamos de derecha a izquierda
+  for (let digitIndex = dataWithoutCheckDigit.length - 1; digitIndex >= 0; digitIndex--) {
+    const currentDigit = dataWithoutCheckDigit[digitIndex] ?? 0;
+    checksumSum += currentDigit * multiplicador;
+    multiplicador = multiplicador === 3 ? 1 : 3;
   }
 
-  return (10 - (sum % 10)) % 10;
+  const remainder = checksumSum % MOD_10;
+  return (MOD_10 - remainder) % MOD_10;
 }
 
 /*
- * CODE128 — CHECKSUM MOD103
+ * FUNCIÓN PRINCIPAL DE VALIDACIÓN
+ * Detecta tipo de código y valida según reglas específicas
  */
-// Code128-A → ASCII 0–95
-function isCode128A(str: string): boolean {
-  for (let i = 0; i < str.length; i++) {
-    const cc = str.charCodeAt(i);
-    if (cc < 0 || cc > 95) return false;
-  }
-  return true;
-}
-
-// Code128-B → ASCII 32–126
-function isCode128B(str: string): boolean {
-  for (let i = 0; i < str.length; i++) {
-    const cc = str.charCodeAt(i);
-    if (cc < 32 || cc > 126) return false;
-  }
-  return true;
-}
-
-// Code128-C → Solo números + longitud par
-function isCode128C(str: string): boolean {
-  return /^\d+$/.test(str) && str.length % 2 === 0;
-}
-
-/*
- * VALIDACIÓN FINAL
- */
-export function validateBarCode(barcode: string): void {
-  const type = simbologyDetection(barcode);
-
-  let valid = false;
+export function validateBarCode(barcodeData: string): void {
+  const symbologyType = detectBarcodeSymbology(barcodeData);
+  let isValid = false;
 
   try {
-    // --- EAN / UPC ---
-    if (['EAN-13', 'EAN-8', 'UPC-A', 'UPC-E'].includes(type)) {
-      // --- CASO ESPECIAL UPC-E ---
-      if (type === 'UPC-E') {
-        const expanded = expandUpcEtoUpcA(barcode);
-        const expected = mod10CheckSum(expanded);
-        const actual = Number(barcode[7]); // último dígito UPC-E
-        valid = expected === actual;
+    // VALIDACIÓN: EAN-13, EAN-8, UPC-A, UPC-E
+    if (['EAN-13', 'EAN-8', 'UPC-A', 'UPC-E'].includes(symbologyType)) {
+      // Caso especial: UPC-E requiere expansión antes de validar
+      if (symbologyType === 'UPC-E') {
+        const expandedToUpcA = expandUpcEtoUpcA(barcodeData);
+        const expectedCheckDigit = calculateMod10Checksum(expandedToUpcA);
+        const actualCheckDigit = Number(barcodeData[7]); // último dígito de UPC-E
+        isValid = expectedCheckDigit === actualCheckDigit;
 
         barCodeEmitter.emit('code:validated', {
-          barcode,
-          simbology: type,
-          valid,
+          barcode: barcodeData,
+          simbology: symbologyType,
+          valid: isValid,
         });
         return;
       }
 
-      // EAN-13, EAN-8, UPC-A
-      const expected = mod10CheckSum(barcode);
-      const actual = Number(barcode.slice(-1));
-      valid = expected === actual;
+      // EAN-13, EAN-8, UPC-A: validación directa
+      const expectedCheckDigit = calculateMod10Checksum(barcodeData);
+      const actualCheckDigit = Number(barcodeData.slice(-1));
+      isValid = expectedCheckDigit === actualCheckDigit;
     }
 
-    // --- CODE128-A ---
-    else if (type === 'Code128-A') {
-      valid = isCode128A(barcode);
+    // VALIDACIÓN: Code128-A
+    else if (symbologyType === 'Code128-A') {
+      isValid = isValidCode128A(barcodeData);
     }
 
-    // --- CODE128-B ---
-    else if (type === 'Code128-B') {
-      valid = isCode128B(barcode);
+    // VALIDACIÓN: Code128-B
+    else if (symbologyType === 'Code128-B') {
+      isValid = isValidCode128B(barcodeData);
     }
 
-    // --- CODE128-C ---
-    else if (type === 'Code128-C') {
-      valid = isCode128C(barcode);
+    // VALIDACIÓN: Code128-C
+    else if (symbologyType === 'Code128-C') {
+      isValid = isValidCode128C(barcodeData);
     }
 
-    // --- SIMBOLOGÍA NO SOPORTADA ---
+    // SIMBOLOGÍA NO SOPORTADA
     else {
-      throw new Error('Unsupported symbology');
+      throw new Error(`Unsupported barcode symbology: ${symbologyType}`);
     }
 
-    // --- EMITIR RESULTADO ---
+    // EMITIR RESULTADO DE VALIDACIÓN
     barCodeEmitter.emit('code:validated', {
-      barcode,
-      simbology: type,
-      valid,
+      barcode: barcodeData,
+      simbology: symbologyType,
+      valid: isValid,
     });
-  } catch (err) {
-    console.error(`Validation error for ${barcode}:`, (err as Error).message);
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    console.error(`Validation error for barcode "${barcodeData}": ${errorMessage}`);
+
+    barCodeEmitter.emit('code:validated', {
+      barcode: barcodeData,
+      simbology: symbologyType,
+      valid: false,
+      error: errorMessage,
+    });
   }
 }
