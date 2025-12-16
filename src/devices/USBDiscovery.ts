@@ -6,13 +6,11 @@ import { EventEmitter } from 'events';
 export const usbEmitter = new EventEmitter();
 
 class USBDiscovery extends Connection {
-  private device: usb.Device | undefined;
   private isConnected = false;
   private intervalId: NodeJS.Timeout | null = null;
 
   constructor(codigo: string) {
     super(codigo, 'USB');
-    this.device = undefined;
   }
 
   /**
@@ -93,7 +91,6 @@ class USBDiscovery extends Connection {
   public override disconnect(): void {
     this.stop();
     this.isConnected = false;
-    this.device = undefined;
   }
 }
 
