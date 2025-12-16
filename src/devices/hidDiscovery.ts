@@ -11,34 +11,30 @@ export class HidDevice extends Connection {
   private isConnected = false;
   private intervalId: NodeJS.Timeout | null = null;
 
-  constructor(
-    private readonly vendorId: number,
-    private readonly productName: string,
-    codigo: string
-  ) {
+  constructor(codigo: string) {
     super(codigo, 'HID');
+  }
+
+  //Vamos a descubrir todos dispositivos por HID y retornar un array de dispositivos HID
+  public override async discover(): Promise<HID.Device[]> {
+    try {
+      return await HID.devicesAsync();
+    } catch (error) {
+      logger.error({ err: error }, 'Error discovering HID devices');
+      return [];
+    }
   }
 
   /**
    * Inicia el escaneo periódico de dispositivos HID
    * Retorna una función de limpieza
    */
-  public connect(): () => void {
+  public connect(vendorId: number, productName: string): () => void {
     this.intervalId = setInterval(async () => {
-      let devices: HID.Device[] = [];
+      let devices = await this.discover();
 
-      try {
-        devices = await HID.devicesAsync();
-      } catch (e) {
-        logger.error({ err: e }, 'Error scanning devices');
-        return;
-      }
-
-      const filtered = devices.filter(
-        (device) => device.vendorId === this.vendorId && device.product === this.productName
-      );
-
-      const found = filtered[0];
+      // Usa setDeviceInfo para filtrar y obtener el dispositivo que coincide
+      const found = this.setDeviceInfo(devices, vendorId, productName);
 
       // --- Disconnected ---
       if (this.isConnected && !found) {
@@ -47,22 +43,9 @@ export class HidDevice extends Connection {
         return;
       }
 
-      // Si no hay dispositivo, no hay nada más que hacer
       if (!found) {
         return;
       }
-
-      const deviceInfo: { name?: string; serialNumber?: string } = {};
-
-      if (found.product !== undefined) {
-        deviceInfo.name = found.product;
-      }
-
-      if (found.serialNumber !== undefined) {
-        deviceInfo.serialNumber = found.serialNumber;
-      }
-
-      this.setDeviceInfo(deviceInfo);
 
       // --- Reconnected ---
       if (!this.isConnected && this.serialNumber) {
@@ -72,7 +55,7 @@ export class HidDevice extends Connection {
             event: 'device_reconnected',
             deviceId: found.serialNumber,
           });
-          hidEmitter.emit('device:reconnect', found);
+          hidEmitter.emit('device:reconnected', found);
           return;
         }
       }
@@ -87,7 +70,7 @@ export class HidDevice extends Connection {
           deviceId: found.serialNumber,
         });
 
-        this.saveDevice(filtered);
+        this.saveDevice(devices);
         hidEmitter.emit('device:connected', found);
       }
     }, 1000);
@@ -95,19 +78,7 @@ export class HidDevice extends Connection {
     return () => this.stop();
   }
 
-  /**
-   * Detiene el escaneo
-   */
-  public stop(): void {
-    if (this.intervalId) {
-      clearInterval(this.intervalId);
-      this.intervalId = null;
-    }
-  }
-
-  /**
-   * Persiste información del dispositivo
-   */
+  //Guardamos la información de los dispositivos en un archivo JSON
   private saveDevice(devices: HID.Device[]): void {
     const filePath = path.resolve('./devices.json');
 
@@ -119,8 +90,26 @@ export class HidDevice extends Connection {
     }
   }
 
+  // Detenemos el escaneo periódico metodo privado
+  private stop(): void {
+    if (this.intervalId) {
+      clearInterval(this.intervalId);
+      this.intervalId = null;
+    }
+  }
+
+  // Desconecta del dispositivo
   public override disconnect(): void {
     this.stop();
     this.isConnected = false;
   }
+}
+
+/**
+ * Función helper para iniciación rápida (mantiene compatibilidad)
+ */
+export function listHidDevices(vendorId: number, productName: string): HidDevice {
+  const hidDevice = new HidDevice('default');
+  hidDevice.connect(vendorId, productName);
+  return hidDevice;
 }
