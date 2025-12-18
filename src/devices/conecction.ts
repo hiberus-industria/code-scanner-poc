@@ -5,10 +5,7 @@ export class Connection {
   protected deviceName: string | undefined;
   protected serialNumber: string | undefined;
 
-  constructor(
-    protected codigo: string,
-    protected tipo: 'HID' | 'USB'
-  ) {}
+  constructor(protected tipo: 'HID' | 'USB') {}
 
   protected setDeviceInfo(
     devices: any[],

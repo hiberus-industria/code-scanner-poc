@@ -1,5 +1,5 @@
 import { barCodeEmitter, validateBarCode } from './devices/barCodeValidator.js';
-import { hidEmitter, listHidDevices } from './devices/hidDiscovery.js';
+import { HidDevice, hidEmitter } from './devices/hidDiscovery.js';
 import { parseHidData, parserEmitter } from './devices/hidParser.js';
 import HID from 'node-hid';
 import { EventSender } from './transport/sender.js';
@@ -21,6 +21,10 @@ const productName = process.env['PRODUCT'];
 if (!productName) throw new Error('PRODUCT must be set');
 
 let currentDevice: HID.HID | null = null;
+
+// LLamamos al objeto de descubrimiento HID
+const hidDiscovery = new HidDevice();
+hidDiscovery.connect(vendorId, productName);
 
 // Global listener for parsed lines
 parserEmitter.on('raw:scan', (line: string) => {
@@ -70,9 +74,6 @@ function cleanupDevice(device: HID.HID | null) {
   } catch {}
   if (device === currentDevice) currentDevice = null;
 }
-
-// init discovery
-listHidDevices(vendorId, productName);
 
 process.on('SIGINT', () => {
   cleanupDevice(currentDevice);

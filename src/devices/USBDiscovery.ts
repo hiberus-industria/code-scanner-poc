@@ -9,8 +9,8 @@ class USBDiscovery extends Connection {
   private isConnected = false;
   private intervalId: NodeJS.Timeout | null = null;
 
-  constructor(codigo: string) {
-    super(codigo, 'USB');
+  constructor() {
+    super('USB');
   }
 
   /**

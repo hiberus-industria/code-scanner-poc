@@ -11,8 +11,8 @@ export class HidDevice extends Connection {
   private isConnected = false;
   private intervalId: NodeJS.Timeout | null = null;
 
-  constructor(codigo: string) {
-    super(codigo, 'HID');
+  constructor() {
+    super('HID');
   }
 
   //Vamos a descubrir todos dispositivos por HID y retornar un array de dispositivos HID
@@ -103,13 +103,4 @@ export class HidDevice extends Connection {
     this.stop();
     this.isConnected = false;
   }
-}
-
-/**
- * Función helper para iniciación rápida (mantiene compatibilidad)
- */
-export function listHidDevices(vendorId: number, productName: string): HidDevice {
-  const hidDevice = new HidDevice('default');
-  hidDevice.connect(vendorId, productName);
-  return hidDevice;
 }
