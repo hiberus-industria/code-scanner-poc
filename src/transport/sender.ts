@@ -4,7 +4,7 @@ import { logger } from '../infra/logger.js';
 
 const REQUEST_TIMEOUT = 5000;
 const MAX_RETRIES = 3;
-const CIRCUIT_PAUSE = 10000; // 10 segundos en lugar de 60
+const CIRCUIT_PAUSE = 60000; // 10 segundos en lugar de 60
 
 function delay(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -20,7 +20,6 @@ export class EventSender {
   }
 
   public async start() {
-    logger.info('EventSender started - waiting for events in queue');
     while (true) {
       if (this.circuitOpen) {
         logger.warn(`Circuit breaker open. Waiting ${CIRCUIT_PAUSE}ms before retry...`);

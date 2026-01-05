@@ -14,14 +14,6 @@ app.get('/', (req, res) => {
     <html>
     <head>
       <title>Scanner Events Dashboard</title>
-      <style>
-        body { font-family: Arial; margin: 20px; background: #f5f5f5; }
-        .container { max-width: 1200px; margin: 0 auto; }
-        .section { background: white; padding: 20px; margin: 20px 0; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-        h1 { color: #333; border-bottom: 2px solid #007bff; padding-bottom: 10px; }
-        pre { background: #f8f9fa; padding: 15px; border-radius: 4px; overflow-x: auto; max-height: 500px; overflow-y: auto; }
-        .count { font-size: 24px; color: #007bff; font-weight: bold; }
-      </style>
     </head>
     <body>
       <div class="container">

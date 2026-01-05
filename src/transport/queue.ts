@@ -7,10 +7,12 @@ interface EventEntry {
   url: string;
   payload: EventPayload;
 }
-export interface EventPayload {
-  simbology: string;
-  valid: string;
-}
+
+/**
+ * Flexible payload: accepts any object structure from domain events
+ * (barcode, weight, or any future device type)
+ */
+export type EventPayload = Record<string, unknown>;
 
 export class Queue {
   private __filename = fileURLToPath(import.meta.url);
