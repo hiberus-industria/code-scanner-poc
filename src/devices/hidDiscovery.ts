@@ -3,87 +3,121 @@ import fs from 'fs';
 import path from 'path';
 import { EventEmitter } from 'events';
 import { logger } from '../infra/logger.js';
+import { Connection } from './conecction.js';
 
 export const hidEmitter = new EventEmitter();
 
-let isConnected = false;
-let serialNumber: string | undefined;
-let intervalId: NodeJS.Timeout | null = null;
+export class HidDevice extends Connection {
+  private isConnected = false;
+  private intervalId: NodeJS.Timeout | null = null;
 
-export function listHidDevices(vendorId: number, productName: string): () => void {
-  // eslint-disable-next-line @typescript-eslint/no-misused-promises
-  intervalId = setInterval(async () => {
-    let devices: HID.Device[] = [];
+  constructor() {
+    super('HID');
+  }
 
+  public override async discover(): Promise<HID.Device[]> {
     try {
-      devices = await HID.devicesAsync();
-    } catch (e) {
-      logger.error({ err: e }, 'Error scanning devices');
-      return;
+      // Obtener la lista de dispositivos HID conectados
+      return await HID.devicesAsync();
+    } catch (error) {
+      logger.error({ err: error }, 'Error discovering HID devices');
+      return [];
     }
+  }
 
-    const filtered = devices.filter(
-      (device) => device.vendorId === vendorId && device.product === productName
-    );
+  /**
+   * Inicia el escaneo periódico de dispositivos HID
+   * PAUSA cuando está conectado, REANUDA cuando se desconecta
+   * Este metodo se encuentra en el INDEX.TS
+   */
+  public connect(vendorId: number, productName: string): () => void {
+    this.startSearch(vendorId, productName);
+    return () => this.stop();
+  }
 
-    if (filtered.length === 0) {
-      logger.warn('No HID devices found with the specified criteria.');
-    }
+  private startSearch(vendorId: number, productName: string): void {
+    if (this.intervalId) return; // is already searching
 
-    const found = filtered[0];
+    this.intervalId = setInterval(async () => {
+      const devices = await this.discover();
+      const found = this.setDeviceInfo(devices, vendorId, productName);
 
-    // --- Disconnected ---
-    if (isConnected && !found) {
-      isConnected = false;
-      // Keep serialNumber so we can reconnect later
-      hidEmitter.emit('device:disconnected');
-      return;
-    }
+      /**
+       * Emmit events based on device connection state
+       */
 
-    // If no device is found, there’s nothing else to do
-    if (!found) {
-      return;
-    }
-
-    // --- Reconnected ---
-    if (!isConnected && serialNumber) {
-      // If we have a saved serialNumber, compare it
-      if (found.serialNumber === serialNumber) {
-        isConnected = true;
-        logger.info({ event: 'device_reconnected', deviceId: found.serialNumber });
-        hidEmitter.emit('device:reconnect', found);
+      // --- Device Disconnected ---
+      if (this.isConnected && !found) {
+        this.isConnected = false;
+        logger.info({
+          event: 'device_disconnected',
+          deviceId: this.serialNumber,
+        });
+        hidEmitter.emit('device:disconnected');
         return;
       }
+
+      if (!found) return;
+
+      // --- Dispositivo reconectado ---
+      if (!this.isConnected && this.serialNumber) {
+        if (found.serialNumber === this.serialNumber) {
+          this.isConnected = true;
+          logger.info({
+            event: 'device_reconnected',
+            deviceId: found.serialNumber,
+          });
+          hidEmitter.emit('device:reconnected', { ...found, connectionType: 'reconnected' });
+          this.stop();
+          return;
+        }
+      }
+
+      // --- Primera conexión ---
+      if (!this.isConnected) {
+        this.isConnected = true;
+        this.serialNumber = found.serialNumber;
+
+        logger.info({
+          event: 'device_connected',
+          deviceId: found.serialNumber,
+        });
+
+        this.saveDevice(devices);
+        hidEmitter.emit('device:connected', { ...found, connectionType: 'connected' });
+        this.stop();
+      }
+    }, 1000);
+  }
+
+  // Save device in JSON File
+  private saveDevice(devices: HID.Device[]): void {
+    const filePath = path.resolve('./devices.json');
+
+    try {
+      // Enriquecer datos con información de conexión;
+      const fsSaveDevice = devices.map((device) => ({
+        ...device,
+        connectionType: 'HID',
+        savedAt: new Date().toISOString(),
+      }));
+
+      fs.writeFileSync(filePath, JSON.stringify(fsSaveDevice, null, 2));
+      logger.info({ filePath, connectionType: 'HID' }, 'Device information saved');
+    } catch (err) {
+      logger.error({ err }, 'Error writing file');
     }
+  }
 
-    // --- Connected for the first time ---
-    if (!isConnected) {
-      isConnected = true;
-      serialNumber = found.serialNumber; // Save the serial number for future reconnections
-      logger.info({ event: 'device_connected', deviceId: found.serialNumber });
-      saveDevice(filtered);
-      hidEmitter.emit('device:connected', found);
-      return;
+  private stop(): void {
+    if (this.intervalId) {
+      clearInterval(this.intervalId);
+      this.intervalId = null;
     }
-  }, 1000);
+  }
 
-  // Return cleanup function
-  return () => {
-    if (intervalId !== null) {
-      clearInterval(intervalId);
-      intervalId = null;
-    }
-  };
-}
-
-function saveDevice(found: HID.Device[]): void {
-  const jsonString = JSON.stringify(found, null, 2);
-  const filePath = path.resolve('./devices.json');
-
-  try {
-    fs.writeFileSync(filePath, jsonString);
-    logger.info(`Device information saved to ${filePath}`);
-  } catch (err) {
-    logger.error({ err }, 'Error writing file');
+  public override disconnect(): void {
+    this.stop();
+    this.isConnected = false;
   }
 }

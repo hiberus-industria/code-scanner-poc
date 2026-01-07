@@ -163,7 +163,6 @@ export function validateBarCode(barcodeData: string): void {
   barCodeEmitter.emit('code:validated', {
     simbology: detected,
     valid,
-    ts: new Date().toLocaleString('es-ES'),
     error,
   });
 }
