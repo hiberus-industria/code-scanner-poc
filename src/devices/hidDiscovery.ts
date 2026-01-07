@@ -9,7 +9,6 @@ export const hidEmitter = new EventEmitter();
 
 export class HidDevice extends Connection {
   private isConnected = false;
-  private isSearching = false;
   private intervalId: NodeJS.Timeout | null = null;
 
   constructor() {
@@ -18,6 +17,7 @@ export class HidDevice extends Connection {
 
   public override async discover(): Promise<HID.Device[]> {
     try {
+      // Obtener la lista de dispositivos HID conectados
       return await HID.devicesAsync();
     } catch (error) {
       logger.error({ err: error }, 'Error discovering HID devices');
@@ -28,6 +28,7 @@ export class HidDevice extends Connection {
   /**
    * Inicia el escaneo periódico de dispositivos HID
    * PAUSA cuando está conectado, REANUDA cuando se desconecta
+   * Este metodo se encuentra en el INDEX.TS
    */
   public connect(vendorId: number, productName: string): () => void {
     this.startSearch(vendorId, productName);
@@ -35,14 +36,17 @@ export class HidDevice extends Connection {
   }
 
   private startSearch(vendorId: number, productName: string): void {
-    if (this.isSearching) return;
-    this.isSearching = true;
+    if (this.intervalId) return; // is already searching
 
     this.intervalId = setInterval(async () => {
       const devices = await this.discover();
       const found = this.setDeviceInfo(devices, vendorId, productName);
 
-      // --- Dispositivo desconectado ---
+      /**
+       * Emmit events based on device connection state
+       */
+
+      // --- Device Disconnected ---
       if (this.isConnected && !found) {
         this.isConnected = false;
         logger.info({
@@ -50,13 +54,10 @@ export class HidDevice extends Connection {
           deviceId: this.serialNumber,
         });
         hidEmitter.emit('device:disconnected');
-        this.resumeSearch(vendorId, productName);
         return;
       }
 
-      if (!found) {
-        return;
-      }
+      if (!found) return;
 
       // --- Dispositivo reconectado ---
       if (!this.isConnected && this.serialNumber) {
@@ -67,7 +68,7 @@ export class HidDevice extends Connection {
             deviceId: found.serialNumber,
           });
           hidEmitter.emit('device:reconnected', { ...found, connectionType: 'reconnected' });
-          this.pauseSearch();
+          this.stop();
           return;
         }
       }
@@ -82,40 +83,27 @@ export class HidDevice extends Connection {
           deviceId: found.serialNumber,
         });
 
-        this.saveDevice(devices, 'connected');
+        this.saveDevice(devices);
         hidEmitter.emit('device:connected', { ...found, connectionType: 'connected' });
-        this.pauseSearch(); // Pausa aquí
+        this.stop();
       }
     }, 1000);
   }
 
-  private pauseSearch(): void {
-    if (this.intervalId) {
-      clearInterval(this.intervalId);
-      this.intervalId = null;
-      this.isSearching = false;
-      logger.debug('Device search paused - connected');
-    }
-  }
-
-  private resumeSearch(vendorId: number, productName: string): void {
-    logger.debug('Device search resumed - disconnected');
-    this.startSearch(vendorId, productName);
-  }
-
-  private saveDevice(devices: HID.Device[], connectionType: 'connected' | 'reconnected'): void {
+  // Save device in JSON File
+  private saveDevice(devices: HID.Device[]): void {
     const filePath = path.resolve('./devices.json');
 
     try {
-      // Enriquecer datos con información de conexión
-      const enrichedDevices = devices.map((device) => ({
+      // Enriquecer datos con información de conexión;
+      const fsSaveDevice = devices.map((device) => ({
         ...device,
-        connectionType,
+        connectionType: 'HID',
         savedAt: new Date().toISOString(),
       }));
 
-      fs.writeFileSync(filePath, JSON.stringify(enrichedDevices, null, 2));
-      logger.info({ filePath, connectionType }, 'Device information saved to devices.json');
+      fs.writeFileSync(filePath, JSON.stringify(fsSaveDevice, null, 2));
+      logger.info({ filePath, connectionType: 'HID' }, 'Device information saved');
     } catch (err) {
       logger.error({ err }, 'Error writing file');
     }
@@ -125,7 +113,6 @@ export class HidDevice extends Connection {
     if (this.intervalId) {
       clearInterval(this.intervalId);
       this.intervalId = null;
-      this.isSearching = false;
     }
   }
 

@@ -14,9 +14,6 @@ export enum DeviceType {
 /**
  * Detecta si un dispositivo es un lector de código de barras o una báscula
  * basándose en Usage Page y Usage ID
- *
- * @param device Dispositivo HID o USB a analizar
- * @returns Tipo de dispositivo detectado
  */
 export function detectDeviceType(device: any): DeviceType {
   const usagePage = device.usagePage;

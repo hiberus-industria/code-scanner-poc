@@ -7,35 +7,29 @@ export class Connection {
 
   constructor(protected tipo: 'HID' | 'USB') {}
 
-  protected setDeviceInfo(
-    devices: any[],
-    vendorId: number,
-    productId: string | number
-  ): any | undefined {
+  protected setDeviceInfo(devices: any[], vendorId: number, productName: string): any | undefined {
     if (!devices || devices.length === 0) {
       return undefined;
     }
 
     const isHid = this.tipo === 'HID';
 
-    //Si los dispositivos se han encontrado, buscamos cual coincide con los datos.
     const found = devices.find((device) =>
       isHid
-        ? device.vendorId === vendorId && device.product === productId
+        ? device.vendorId === vendorId && device.product === productName
         : device.deviceDescriptor?.idVendor === vendorId &&
-          device.deviceDescriptor?.idProduct === productId
+          device.deviceDescriptor?.idProduct === productName
     );
 
     if (!found) return undefined;
 
-    if (found) {
-      if (this.tipo === 'HID') {
-        this.deviceName = found.product;
-        this.serialNumber = found.serialNumber;
-      } else {
-        this.deviceName = `USB Device ${found.deviceDescriptor.idVendor.toString(16)}:${found.deviceDescriptor.idProduct.toString(16)}`;
-        this.serialNumber = found.deviceDescriptor.iSerialNumber?.toString();
-      }
+    // Asignar metadatos solo si el dispositivo fue encontrado
+    if (isHid) {
+      this.deviceName = found.product;
+      this.serialNumber = found.serialNumber;
+    } else {
+      this.deviceName = found.product ?? 'USB Device';
+      this.serialNumber = found.serialNumber ?? null;
     }
 
     return found;

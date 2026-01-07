@@ -7,7 +7,6 @@ export const usbEmitter = new EventEmitter();
 
 export class USBDiscovery extends Connection {
   private isConnected = false;
-  private isSearching = false;
   private intervalId: NodeJS.Timeout | null = null;
 
   constructor() {
@@ -30,7 +29,6 @@ export class USBDiscovery extends Connection {
   /**
    * Inicia el escaneo periódico de dispositivos USB
    * PAUSA cuando está conectado, REANUDA cuando se desconecta
-   * Retorna una función de limpieza
    */
   public connect(vendorId: number, productName: string): () => void {
     this.startSearch(vendorId, productName);
@@ -38,49 +36,53 @@ export class USBDiscovery extends Connection {
   }
 
   private startSearch(vendorId: number, productName: string): void {
-    if (this.isSearching) return;
-    this.isSearching = true;
+    if (this.intervalId) return; // already searching
 
     this.intervalId = setInterval(async () => {
       const devices = await this.discover();
-
-      // Usa setDeviceInfo para filtrar y obtener el dispositivo que coincide
       const found = this.setDeviceInfo(devices, vendorId, productName);
 
-      // --- Dispositivo desconectado ---
+      /**
+       * Emit events based on device connection state
+       */
+
+      // --- Device disconnected ---
       if (this.isConnected && !found) {
         this.isConnected = false;
+
         logger.info({
           event: 'device_disconnected',
           deviceId: this.serialNumber,
         });
+
         usbEmitter.emit('device:disconnected');
-        this.resumeSearch(vendorId, productName);
         return;
       }
 
-      if (!found) {
-        return;
-      }
+      if (!found) return;
 
-      // --- Dispositivo reconectado ---
+      const foundSerial = found.deviceDescriptor.iSerialNumber?.toString();
+
+      // --- Device reconnected ---
       if (!this.isConnected && this.serialNumber) {
-        if (found.deviceDescriptor.iSerialNumber?.toString() === this.serialNumber) {
+        if (foundSerial === this.serialNumber) {
           this.isConnected = true;
+
           logger.info({
             event: 'device_reconnected',
-            deviceId: found.deviceDescriptor.iSerialNumber?.toString(),
+            deviceId: foundSerial,
           });
+
           usbEmitter.emit('device:reconnected', found);
-          this.pauseSearch(); // Pausa aquí
+          this.stop();
           return;
         }
       }
 
-      // --- Primera conexión ---
+      // --- First connection ---
       if (!this.isConnected) {
         this.isConnected = true;
-        this.serialNumber = found.deviceDescriptor.iSerialNumber?.toString();
+        this.serialNumber = foundSerial;
 
         logger.info({
           event: 'device_connected',
@@ -88,33 +90,15 @@ export class USBDiscovery extends Connection {
         });
 
         usbEmitter.emit('device:connected', found);
-        this.pauseSearch(); // Pausa aquí
+        this.stop();
       }
     }, 1000);
   }
 
-  private pauseSearch(): void {
+  private stop(): void {
     if (this.intervalId) {
       clearInterval(this.intervalId);
       this.intervalId = null;
-      this.isSearching = false;
-      logger.debug('Device search paused - connected');
-    }
-  }
-
-  private resumeSearch(vendorId: number, productName: string): void {
-    logger.debug('Device search resumed - disconnected');
-    this.startSearch(vendorId, productName);
-  }
-
-  /**
-   * Detiene el escaneo
-   */
-  public stop(): void {
-    if (this.intervalId) {
-      clearInterval(this.intervalId);
-      this.intervalId = null;
-      this.isSearching = false;
     }
   }
 

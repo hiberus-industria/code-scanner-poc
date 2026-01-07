@@ -36,6 +36,7 @@ let currentDevice: HID.HID | null = null;
 const hidDiscovery = new HidDevice();
 hidDiscovery.connect(vendorId, productName);
 
+// === USB Discovery ===
 const usbDiscovery = new USBDiscovery();
 usbDiscovery.connect(vendorId, productName);
 
